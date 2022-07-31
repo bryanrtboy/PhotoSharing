@@ -7,6 +7,7 @@ An app to take a screenshot and save it to a gallery on all platforms using Unit
 * Once 4 images are saved, older ones are deleted so the app doesn't keep taking up space
 * Thumbnails and large preview images must display correctly by resizing aspect ratio based on screen orientation
 * If orientation changes while viewing the preview image, image updates to be correct again
+* Some UI elements are hidden during screen capture, and other UI elements become part of the screen capture (border, logo)
 
 # Sharing
 Eventually, this will use the https://github.com/yasirkula/UnityNativeGallery plug-in to allow the saved photos to be added to the devices Photo Album. That plug-in is not part of this repo, install it yourself if you want to get that working, or comment out the scripts that reference the plug-in.
