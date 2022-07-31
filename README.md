@@ -1,5 +1,5 @@
-# PhotoSharing
-An app to take a screenshot and save it to a gallery on all platforms using Unity.  Surprisingly complicated to set this up!  The app I am designing this for has the following requirements:
+# Photo Gallery
+An app to take a screenshot and save it to an in-game gallery on all platforms using Unity.  Surprisingly complicated to set this up!  The app I am designing this for has the following requirements:
 * Save a screenshot to disc as if the user was using their camera
 * Can be used in landscape or portrait mode
 * Saves 4 images to disc, so closing/opening the app will retain the images
