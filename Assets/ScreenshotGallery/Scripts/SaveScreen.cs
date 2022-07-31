@@ -1,106 +1,124 @@
-﻿using System;
+﻿//Bryan Leister, July 2022
+//Script to take a screenshot and then save it to the user's disk space. The limit is the number
+//of buttons, 4 in this example. That way, the old images are deleted so the app does not gradually
+//fill up the users disk.
+//To do - implement a Save to Photo Album function so users can save their screenshots to their phones
+//photo album to use however they want. Mobile screenshots are saved as part of the app and is not accessible
+//to the user otherwise.
+
+using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement;
-//using UnityEditor;
 using System.IO;
 using UnityEngine.Networking;
 using Random = UnityEngine.Random;
 
 public class SaveScreen : MonoBehaviour
 {
-
-    // public GameObject m_buttonPrefab;
-    // public string m_path = "/Screenshots/";
-    //public int m_buttonCount = 10;
-    public GameObject[] m_thingsToHide;
-    public GameObject[] m_galleryUIToShow;
-    public Text m_debug;
-
-    bool m_isLocked = false;
-    int m_count = 0;
-    //    Texture2D texture = null;
+    public GameObject[] m_hideDuringCapture;
+    public GameObject[] m_showDuringCapture;
+    public GameObject m_gallery;
+    public RawImage m_featuredImage;
     public RawImage[] m_buttons;
 
-    void Start()
-    {
-        //Gallery as it's own level fix (DAM FIX)
-        for (int i = 0; i < m_buttons.Length; i++)
-        {
-            m_buttons[i].gameObject.SetActive(false);
-        }
+    bool _isLocked = false;
+    private GameObject _emptyButton = null;
 
+    private void Awake()
+    {
+        m_gallery.SetActive(false);
+        m_featuredImage.transform.parent.gameObject.SetActive(false);
+    }
+
+    void OnEnable()
+    {
         StartCoroutine(LoadExistingImagesOnStart());
     }
 
     public void SaveScreenToDisk()
     {
-        if (m_isLocked)
+        if (_isLocked)
             return;
 
-        m_isLocked = true;
+        _isLocked = true;
         StartCoroutine(SaveAndUse());
     }
 
     IEnumerator SaveAndUse()
     {
-        HideThingsForScreenshot(true);
-        yield return new WaitForEndOfFrame();
-        string filename = m_count.ToString() + ".png";
+        Visibility(m_hideDuringCapture,false);
+        Visibility(m_showDuringCapture,true);
+        _emptyButton = null;
+        for (int i =0; i < m_buttons.Length; i++)
+        {
+            if (m_buttons[i].texture == null)
+            {
+                _emptyButton = m_buttons[i].gameObject;
+                break;
+            }
+        }
+
+        //If gallery is full, delete the last image and overwrite with the new one
+        if (_emptyButton == null)
+        {
+            int lastChildIndex = m_buttons[0].transform.parent.childCount - 1;
+            _emptyButton = m_buttons[0].transform.parent.GetChild(lastChildIndex).gameObject;
+            string path = Application.persistentDataPath + "/" + _emptyButton.name;
+            if (File.Exists(path))
+                File.Delete(path);
+
+        }
+
+        string filename = RandomStringGenerator(10) + ".png";
+        _emptyButton.name = filename;
         string url = Application.persistentDataPath + "/" + filename;
 
-
-        Debug.Log("Saving screenshot to " + url);
+        // Wait for things to be hidden, then
+        // Take shot and save it to disc – full path in editor, name only for mobile
+        yield return new WaitForEndOfFrame();
 
 #if UNITY_EDITOR
         ScreenCapture.CaptureScreenshot(url);
 #else
-              ScreenCapture.CaptureScreenshot(filename);
+        ScreenCapture.CaptureScreenshot(filename);
 #endif
-        // Take shot
-
-        // Wait
-        yield return null;
-
-        // Debug.Log("Trying to load from " + url);
-        // m_debug.text += "Trying to load from " + url + "\n";
-        //LoadTheLevel(1);
-        //Wait A minute to show gallery (DAM FIX)
+        //Delay before showing the gallery
+        yield return new WaitForSeconds(.5f);
         StartCoroutine(DelayedShare(url));
-
     }
 
-
-    public void HideThingsForScreenshot(bool isHiding)
-    {
-        foreach (GameObject g in m_thingsToHide)
-            g.SetActive(!isHiding);
-    }
-
-    public void ShowBackButton(bool isShowingBackButton)
-    {
-        foreach (GameObject g in m_galleryUIToShow)
-            g.SetActive(isShowingBackButton);
-    }
-
-    public void ShowGalleryButtons(bool isShowingButtons)
+    private void ShowButtonsThatHaveImages()
     {
         foreach (RawImage ri in m_buttons)
         {
-            if (isShowingButtons && ri.texture != null)
+            if (ri.texture != null)
+            {
+                SetAspectRatio(ri);
                 ri.gameObject.SetActive(true);
+            }
             else
                 ri.gameObject.SetActive(false);
         }
 
     }
 
-    IEnumerator LoadExistingImagesOnStart()
+    public void ShowFeaturedImagePanel(RawImage image)
     {
-        //List<string> existingImages = new List<string>();
+        m_featuredImage.texture = image.texture;
+        SetAspectRatio(image);
+        m_featuredImage.name = image.gameObject.name;
+        m_featuredImage.transform.parent.gameObject.SetActive(true);
+    }
+
+    private IEnumerator LoadExistingImagesOnStart()
+    {
         string[] files = Directory.GetFiles(Application.persistentDataPath);
+        foreach (var rawImage in m_buttons)
+        {
+            rawImage.gameObject.SetActive(false);
+        }
+
         int count = 0;
         foreach (string s in files)
             if (s.EndsWith("png"))
@@ -111,16 +129,20 @@ public class SaveScreen : MonoBehaviour
                 if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError)
                 {
                     Debug.Log(www.error);
-                    m_debug.text += www.error + "\n";
                 }
-                else
+                else if(count < m_buttons.Length)
                 {
                     Texture myTexture = ((DownloadHandlerTexture)www.downloadHandler).texture;
+                    //Debug.Log("Downloaded " + count);
                     RawImage ri = m_buttons[count].GetComponent<RawImage>();
-                    ri.color = Color.white;
                     if (ri)
                     {
+
+                        ri.color = Color.white;
                         ri.texture = myTexture;
+                        SetAspectRatio(ri);
+                        ri.gameObject.name = s.Substring(s.Length - 14);
+                        ri.gameObject.SetActive(true);
                     }
                     count++;
                 }
@@ -128,13 +150,28 @@ public class SaveScreen : MonoBehaviour
             }
     }
 
+    private static void SetAspectRatio(RawImage raw)
+    {
+        Texture myTexture = raw.texture;
+        float scalar = myTexture.height / (float)myTexture.width;
 
-    IEnumerator DelayedShare(string path)
+        if (myTexture.height < myTexture.width)
+        {
+            raw.rectTransform.localScale = new Vector3(1, scalar, 1);
+        }
+        else
+        {
+            scalar = myTexture.width / (float)myTexture.height;
+            raw.rectTransform.localScale = new Vector3(scalar, 1, 1);
+        }
+    }
+
+    private IEnumerator DelayedShare(string path)
     {
         //If we don't wait, we need a unique ID for each texture's name to load properly...
         // yield return new WaitForSeconds(2f);
 
-        System.DateTime startTime = System.DateTime.Now.AddSeconds(6);
+        var startTime = DateTime.Now.AddSeconds(6);
 
         while (IsFileUnavailable(path, startTime))
         {
@@ -142,42 +179,42 @@ public class SaveScreen : MonoBehaviour
             yield return new WaitForSeconds(.05f);
         }
 
-
-            // 
             // run your code that needs the file to be loaded here
             //this path is different than the application data path, prefix it with...file:// for MacOSX
-            UnityWebRequest www = UnityWebRequestTexture.GetTexture("file://" + path);
+            var www = UnityWebRequestTexture.GetTexture("file://" + path);
             yield return www.SendWebRequest();
 
             if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError)
             {
                 Debug.Log(www.error);
-                m_debug.text += www.error + "\n";
             }
             else
             {
                 Texture myTexture = ((DownloadHandlerTexture)www.downloadHandler).texture;
-                RawImage ri = m_buttons[m_count].GetComponent<RawImage>();
+                var ri = _emptyButton.GetComponent<RawImage>();
                 if (ri)
                 {
-                    //Debug.Log("Loading the texture");
                     ri.texture = myTexture;
-                    m_buttons[m_count].transform.SetAsFirstSibling();
-                    m_buttons[m_count].gameObject.SetActive(true);
+                    _emptyButton.transform.SetAsFirstSibling();
+                    _emptyButton.gameObject.SetActive(true);
                 }
 
             }
 
 
-            m_isLocked = false;
-            ShowBackButton(true);
-            ShowGalleryButtons(true);
-            m_count++;
-            if (m_count >= m_buttons.Length)
-                m_count = 0;
+            _isLocked = false;
+            Visibility(m_showDuringCapture,false);
+            m_gallery.SetActive(true);
+            ShowButtonsThatHaveImages();
 
-            Color color = new Color(Random.value, Random.value, Random.value);
-            Camera.main.backgroundColor = color;
+            var color = new Color(Random.value, Random.value, Random.value);
+            if (Camera.main is not null) Camera.main.backgroundColor = color;
+    }
+
+    private void Visibility(GameObject[] objects, bool isVisible)
+    {
+        foreach (GameObject g in objects)
+            g.SetActive(isVisible);
     }
 
     protected virtual bool IsFileUnavailable(string path, System.DateTime start)
@@ -185,23 +222,20 @@ public class SaveScreen : MonoBehaviour
         //timeout if something goes wrong
         if (System.DateTime.Compare(start, System.DateTime.Now) < 0)
         {
-            // Debug.Log("Timed out");
-            // m_debug.text += "Timed Out \n";
+            Debug.Log("Timed out");
             return false;
         }
         // if file doesn't exist, return true
         if (!File.Exists(path))
         {
-            // Debug.Log("File does not exist");
-            // m_debug.text += "File does not exist \n";
+            Debug.Log("File does not exist");
             return true;
         }
 
         //Give the system 5 seconds lead time, if the file is much older, it must not be a new screen capture
         if (System.DateTime.Compare(File.GetLastWriteTime(path).AddSeconds(5), System.DateTime.Now) < 0)
         {
-            // Debug.Log("File is earlier than now");
-            // m_debug.text += "File is earlier than now \n";
+           Debug.Log("File is earlier than now");
             return true;
         }
 
@@ -218,7 +252,7 @@ public class SaveScreen : MonoBehaviour
             //still being written to
             //or being processed by another thread
             //or does not exist (has already been processed)
-            //Debug.Log("Does not exist or is being processed by another thread");
+            Debug.Log("Does not exist or is being processed by another thread");
             return true;
         }
         finally
@@ -229,6 +263,18 @@ public class SaveScreen : MonoBehaviour
 
         //file is not locked
         return false;
+    }
+
+    private static string RandomStringGenerator(int length)
+    {
+        string result = "";
+        for (int i = 0; i < length; i++)
+        {
+            char c = (char)('A' + Random.Range(0, 26));
+            result += c;
+        }
+
+        return result;
     }
 
 }
