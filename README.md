@@ -11,5 +11,5 @@ An app to take a screenshot and save it to an in-game gallery on all platforms u
 
 # Sharing
 Eventually, this will use the https://github.com/yasirkula/UnityNativeGallery plug-in to allow the saved photos to be added to the devices Photo Album. That plug-in is not part of this repo, install it yourself if you want to get that working, or comment out the scripts that reference the plug-in.
-#Basic UI concept
+# Basic UI concept
 The example scene controls the UI by linking and turning on/off things as needed to simulate a camera experience. So the buttons are hard-linked in the editor and the main script also references these buttons as thumbnails for the gallery. At startup, the contents of the user disc is read and those image names are then used to name the buttons. This is how the Delete and Featured image area keeps track of what image is being viewed and potentially deleted.
