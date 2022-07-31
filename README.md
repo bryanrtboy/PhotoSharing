@@ -1,5 +1,5 @@
 
-![screen shot](screencapture.png)
+![screen capture](screencapture.jpg)
 
 # Photo Gallery
 An app to take a screenshot and save it to an in-game gallery on all platforms using Unity.  Surprisingly complicated to set this up!  The app I am designing this for has the following requirements:
