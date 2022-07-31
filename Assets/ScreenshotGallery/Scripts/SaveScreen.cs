@@ -5,6 +5,9 @@
 //To do - implement a Save to Photo Album function so users can save their screenshots to their phones
 //photo album to use however they want. Mobile screenshots are saved as part of the app and is not accessible
 //to the user otherwise.
+//Will use the open source plug-in here: https://github.com/yasirkula/UnityNativeGallery
+//NOTE: the plugins folder is ignored on the Git repository, you will need to install it yourself using the link above.
+
 
 using System;
 using System.Collections;
