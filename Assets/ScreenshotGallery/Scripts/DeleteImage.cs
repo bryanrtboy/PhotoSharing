@@ -9,6 +9,7 @@ using UnityEngine.UI;
 
 public class DeleteImage : MonoBehaviour
 {
+    [HideInInspector]
     public RawImage m_rawImage;
 
     public void DeleteTheImage()
@@ -19,7 +20,6 @@ public class DeleteImage : MonoBehaviour
         if (File.Exists(path))
         {
             File.Delete(path);
-            m_rawImage.texture = null;
             GameObject o;
             (o = m_rawImage.gameObject).SetActive(false);
             m_rawImage.texture = null;
